@@ -13,7 +13,7 @@ public class ProductClient {
 
     public ProductClient(WebClient.Builder webClientBuilder) {
         WebClient webClient = webClientBuilder
-            .baseUrl("http://localhost:8081/graphql")
+            .baseUrl("http://api-gateway:8070/graphql/products")
             .build();
         this.graphQlClient = HttpGraphQlClient.builder(webClient).build();
     }

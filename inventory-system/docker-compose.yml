@@ -158,7 +158,7 @@ services:
       context: ./api-gateway
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "8070:8070"
     depends_on:
       config-server:
         condition: service_healthy

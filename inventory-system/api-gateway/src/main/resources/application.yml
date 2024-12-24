@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 8070
 
 spring:
   application:
@@ -7,18 +7,24 @@ spring:
   cloud:
     gateway:
       routes:
-        - id: product-service
+        - id: product-service-graphql
           uri: http://product-service:8081
           predicates:
-            - Path=/api/products/**
-        - id: order-service
+            - Path=/graphql/products
+          filters:
+            - RewritePath=/graphql/products, /graphql
+        - id: order-service-graphql
           uri: http://order-service:8082
           predicates:
-            - Path=/api/orders/**
-        - id: notification-service
+            - Path=/graphql/orders
+          filters:
+            - RewritePath=/graphql/orders, /graphql
+        - id: notification-service-graphql
           uri: http://notification-service:8083
           predicates:
-            - Path=/api/notifications/**
+            - Path=/graphql/notifications
+          filters:
+            - RewritePath=/graphql/notifications, /graphql
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Origin
         - AddResponseHeader=Access-Control-Allow-Origin, *

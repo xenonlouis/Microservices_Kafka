@@ -2,15 +2,24 @@ spring:
   application:
     name: product-service
   config:
-    import: "optional:configserver:http://localhost:8888"
+    import: optional:configserver:http://config-server:8888
+  cloud:
+    config:
+      uri: http://config-server:8888
+      fail-fast: true
   datasource:
-    url: jdbc:postgresql://localhost:5432/products
+    url: jdbc:postgresql://postgres-products:5432/products
     username: admin
     password: admin
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create-drop
     show-sql: true
+    defer-datasource-initialization: true
+  sql:
+    init:
+      mode: always
+      platform: postgresql
 
 server:
   port: 8081

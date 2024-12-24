@@ -1,12 +1,12 @@
-#!/bin/bash
+docker-compose down
 
 echo "Building all services..."
-Set-Location config-server; mvn clean package -DskipTests
-Set-Location ../product-service; mvn clean package -DskipTests
-Set-Location ../order-service; mvn clean package -DskipTests
-Set-Location ../notification-service; mvn clean package -DskipTests
-Set-Location ../api-gateway; mvn clean package -DskipTests
-Set-Location ..
+cd config-server; mvn clean package -DskipTests
+cd ../product-service; mvn clean package -DskipTests
+cd ../order-service; mvn clean package -DskipTests
+cd ../notification-service; mvn clean package -DskipTests
+cd ../api-gateway; mvn clean package -DskipTests
+cd ..
 
 echo "Starting all containers..."
 docker-compose up -d
@@ -14,51 +14,62 @@ docker-compose up -d
 echo "Waiting for services to start..."
 Start-Sleep -Seconds 30
 
+# Common headers for GraphQL requests
+$headers = @{
+    "Content-Type" = "application/json"
+}
+
 # API Gateway base URL
-$GATEWAY_URL="http://localhost:8080"
+$GATEWAY_URL = "http://localhost:8070"
 
-echo "Testing Product Service through API Gateway..."
+echo "`n=== Testing Product Service (GraphQL) ==="
 echo "1. Getting all products..."
-Invoke-RestMethod -Uri "${GATEWAY_URL}/api/products" -Method Get
-
-echo "`n2. Getting product with ID 1..."
-Invoke-RestMethod -Uri "${GATEWAY_URL}/api/products/1" -Method Get
-
-echo "`n3. Creating a new product..."
-$productBody = @{
-    name = "Test Product"
-    description = "Test Description"
-    price = 99.99
-    quantity = 10
+$query = @{
+    query = "{ products { id name description price stock } }"
 } | ConvertTo-Json
-Invoke-RestMethod -Uri "${GATEWAY_URL}/api/products" -Method Post -Body $productBody -ContentType "application/json"
+$response = Invoke-RestMethod -Uri "$GATEWAY_URL/graphql/products" -Method Post -Headers $headers -Body $query
+Write-Host "Products:" -ForegroundColor Green
+$response.data.products | Format-Table -AutoSize
 
-echo "`nTesting Order Service through API Gateway..."
-echo "1. Getting all orders..."
-Invoke-RestMethod -Uri "${GATEWAY_URL}/api/orders" -Method Get
+echo "`n2. Creating a new product..."
+$query = @{
+    query = "mutation { createProduct(name: `"Test Laptop`", description: `"High-end laptop`", price: 1299.99, stock: 10) { id name description price stock } }"
+} | ConvertTo-Json
+$response = Invoke-RestMethod -Uri "$GATEWAY_URL/graphql/products" -Method Post -Headers $headers -Body $query
+Write-Host "Created Product:" -ForegroundColor Green
+$response.data.createProduct | Format-Table -AutoSize
+$productId = $response.data.createProduct.id
 
-echo "`n2. Creating a new order..."
-$orderBody = @(
-    @{
-        productId = 1
-        quantity = 2
-    }
-) | ConvertTo-Json
-Invoke-RestMethod -Uri "${GATEWAY_URL}/api/orders?customerEmail=test@example.com&customerName=Test%20User" -Method Post -Body $orderBody -ContentType "application/json"
+echo "`n=== Testing Order Service (GraphQL) ==="
+echo "1. Creating a new order..."
+$query = @{
+    query = "mutation { createOrder(input: { customerEmail: `"test@example.com`", items: [{ productId: `"$productId`", quantity: 1 }] }) { id customerEmail totalAmount status items { productId quantity price } } }"
+} | ConvertTo-Json
+$response = Invoke-RestMethod -Uri "$GATEWAY_URL/graphql/orders" -Method Post -Headers $headers -Body $query
+Write-Host "Created Order:" -ForegroundColor Green
+$response.data.createOrder | Format-Table -AutoSize
+$orderId = $response.data.createOrder.id
 
-echo "`n3. Getting order details..."
-Invoke-RestMethod -Uri "${GATEWAY_URL}/api/orders/1" -Method Get
+echo "`n2. Getting order details..."
+$query = @{
+    query = "{ order(id: `"$orderId`") { id customerEmail totalAmount status items { productId quantity price } } }"
+} | ConvertTo-Json
+$response = Invoke-RestMethod -Uri "$GATEWAY_URL/graphql/orders" -Method Post -Headers $headers -Body $query
+Write-Host "Order Details:" -ForegroundColor Green
+$response.data.order | Format-Table -AutoSize
 
-echo "`nTesting Notification Service through API Gateway..."
-echo "1. Getting all notifications..."
-Invoke-RestMethod -Uri "${GATEWAY_URL}/api/notifications" -Method Get
-
-echo "`n2. Getting notifications for order ID 1..."
-Invoke-RestMethod -Uri "${GATEWAY_URL}/api/notifications/order/1" -Method Get
+echo "`n=== Testing Notification Service (GraphQL) ==="
+echo "1. Getting notifications for the order..."
+$query = @{
+    query = "{ notificationsByOrder(orderId: `"$orderId`") { id orderId customerEmail message status createdAt } }"
+} | ConvertTo-Json
+$response = Invoke-RestMethod -Uri "$GATEWAY_URL/graphql/notifications" -Method Post -Headers $headers -Body $query
+Write-Host "Order Notifications:" -ForegroundColor Green
+$response.data.notificationsByOrder | Format-Table -AutoSize
 
 echo "`nChecking service health..."
 echo "1. API Gateway health:"
-Invoke-RestMethod -Uri "${GATEWAY_URL}/actuator/health" -Method Get
+Invoke-RestMethod -Uri "$GATEWAY_URL/actuator/health" -Method Get
 
 echo "`n2. Checking service logs..."
 echo "API Gateway logs:"

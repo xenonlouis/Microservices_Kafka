@@ -10,4 +10,21 @@ spring:
     config:
       server:
         native:
-          search-locations: classpath:/config 
+          search-locations: classpath:/config
+        bootstrap: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true 

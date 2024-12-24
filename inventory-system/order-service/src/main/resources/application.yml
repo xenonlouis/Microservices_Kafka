@@ -2,15 +2,24 @@ spring:
   application:
     name: order-service
   config:
-    import: "optional:configserver:http://localhost:8888"
+    import: optional:configserver:http://config-server:8888
+  cloud:
+    config:
+      uri: http://config-server:8888
+      fail-fast: true
   datasource:
-    url: jdbc:postgresql://localhost:5433/orders
+    url: jdbc:postgresql://postgres-orders:5432/orders
     username: admin
     password: admin
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create-drop
     show-sql: true
+    defer-datasource-initialization: true
+  sql:
+    init:
+      mode: always
+      platform: postgresql
 
 server:
   port: 8082

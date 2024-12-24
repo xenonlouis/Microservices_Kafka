@@ -1,0 +1,42 @@
+type Order {
+    id: ID!
+    customerEmail: String!
+    totalAmount: Float!
+    status: OrderStatus!
+    createdAt: String!
+    items: [OrderItem!]!
+}
+
+type OrderItem {
+    id: ID!
+    productId: ID!
+    quantity: Int!
+    price: Float!
+}
+
+enum OrderStatus {
+    PENDING
+    PROCESSING
+    COMPLETED
+    CANCELLED
+}
+
+type Query {
+    orders: [Order!]!
+    order(id: ID!): Order
+}
+
+type Mutation {
+    createOrder(input: CreateOrderInput!): Order!
+    updateOrderStatus(id: ID!, status: OrderStatus!): Order!
+}
+
+input CreateOrderInput {
+    customerEmail: String!
+    items: [OrderItemInput!]!
+}
+
+input OrderItemInput {
+    productId: ID!
+    quantity: Int!
+} 
